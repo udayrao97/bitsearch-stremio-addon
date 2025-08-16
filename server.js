@@ -23,25 +23,21 @@ const PORT = process.env.PORT || 3000;
 
 // This is a dynamic manifest function now.
 // It generates the manifest based on the query parameters from the config page.
-function createManifest(config) {
-    return {
-        id: 'com.yourname.bitsearchrd',
-        version: '1.5.0',
-        name: 'Bitsearch Real-Debrid Addon',
-        description: 'Scrapes Bitsearch and checks for cached torrents on Real-Debrid. Now with a dedicated settings page!',
-        behaviorHints: {
-            configurable: true,
-            configurationRequired: true,
-        },
-        resources: ['stream'],
-        types: ['movie', 'series'],
-        catalogs: [],
-        idPrefixes: ['tt'],
-        // The configure URL now points to our settings page.
-        // We pass the config as a single parameter.
-        configurable: `/configure?config=${config}`
-    };
-}
+// The main manifest is static, and the config is handled by the URL on install.
+const baseManifest = {
+    id: 'com.yourname.bitsearchrd',
+    version: '1.6.0', // Updated version to reflect the fix
+    name: 'Bitsearch Real-Debrid Addon',
+    description: 'Scrapes Bitsearch and checks for cached torrents on Real-Debrid. Now with a dedicated settings page!',
+    behaviorHints: {
+        configurable: true,
+        // configurationRequired is not needed, we'll redirect to a configuration page instead.
+    },
+    resources: ['stream'],
+    types: ['movie', 'series'],
+    catalogs: [],
+    idPrefixes: ['tt'],
+};
 
 // CORS middleware to allow Stremio to access the server.
 app.use((req, res, next) => {
@@ -66,18 +62,27 @@ app.get('/', (req, res) => {
     res.send('This is a Stremio addon for Bitsearch and Real-Debrid. Go to /configure to set it up.');
 });
 
-// Manifest Endpoint - dynamically generated.
+// Manifest Endpoint - this is a static manifest for the initial install.
 app.get('/manifest.json', (req, res) => {
-    const { config } = req.query;
-    const manifest = createManifest(config);
+    res.json(baseManifest);
+});
+
+// This new endpoint handles the installation of the configured addon.
+app.get('/manifest/:config.json', (req, res) => {
+    const { config } = req.params;
+    const manifest = {
+        ...baseManifest,
+        // This is the new, working installation URL
+        configurable: `/configure?config=${config}`
+    };
     res.json(manifest);
 });
 
 // Stream Endpoint
-app.get('/stream/:type/:id.json', async (req, res) => {
+app.get('/stream/:type/:id/:config.json', async (req, res) => {
     try {
         const { type, id } = req.params;
-        const encodedConfig = req.query.config;
+        const encodedConfig = req.params.config;
 
         if (!encodedConfig) {
             return res.json({ streams: [], error: 'Configuration not provided.' });
@@ -307,4 +312,3 @@ app.listen(PORT, () => {
     console.log(`Stremio addon server is running on http://localhost:${PORT}`);
     console.log(`Install URL: http://localhost:${PORT}/manifest.json`);
 });
-
