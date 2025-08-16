@@ -24,7 +24,7 @@ const PORT = process.env.PORT || 3000;
 
 const manifest = {
     id: 'com.yourname.bitsearchrd',
-    version: '1.1.0',
+    version: '1.2.0',
     name: 'Bitsearch Real-Debrid Addon',
     description: 'Scrapes Bitsearch and checks for cached torrents on Real-Debrid. Now with more features!',
     // The "extra" field is how we get user-configurable settings.
@@ -71,6 +71,11 @@ app.use((req, res, next) => {
 // ENDPOINTS
 // This is where Stremio will make its requests.
 // =================================================================================================
+
+// New root endpoint for health checks and a friendly message.
+app.get('/', (req, res) => {
+    res.send('This is a Stremio addon for Bitsearch and Real-Debrid. Go to /manifest.json to install it.');
+});
 
 app.get('/manifest.json', (req, res) => {
     res.json(manifest);
@@ -268,7 +273,7 @@ async function addNonCachedTorrentToRealDebrid(magnets, realdebridKey) {
 
         const torrentId = addMagnetResponse.data.id;
         if (!torrentId) {
-            console.error('Failed to get torrent ID from Real-Debrid.');
+            console.error('Failed to get torrent ID from Real-Debrida.');
             return null;
         }
 
@@ -297,5 +302,4 @@ app.listen(PORT, () => {
     console.log(`Stremio addon server is running on http://localhost:${PORT}`);
     console.log(`Install URL: http://localhost:${PORT}/manifest.json`);
 });
-
 
