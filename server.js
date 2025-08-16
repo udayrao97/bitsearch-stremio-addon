@@ -1,5 +1,6 @@
 // A Stremio addon server that scrapes Bitsearch and integrates with Real-Debrid.
 // This version includes a dedicated settings page and dynamic manifest generation.
+// The addon settings are now encoded to prevent URL length errors.
 
 // Prerequisites:
 // 1. Install Node.js and npm.
@@ -11,7 +12,6 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const crypto = require('crypto');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,10 +23,10 @@ const PORT = process.env.PORT || 3000;
 
 // This is a dynamic manifest function now.
 // It generates the manifest based on the query parameters from the config page.
-function createManifest(realdebridKey, preferredQuality, preferredCodec, preferredAudio, fallback, excludeKeywords) {
+function createManifest(config) {
     return {
         id: 'com.yourname.bitsearchrd',
-        version: '1.4.0',
+        version: '1.5.0',
         name: 'Bitsearch Real-Debrid Addon',
         description: 'Scrapes Bitsearch and checks for cached torrents on Real-Debrid. Now with a dedicated settings page!',
         behaviorHints: {
@@ -37,7 +37,9 @@ function createManifest(realdebridKey, preferredQuality, preferredCodec, preferr
         types: ['movie', 'series'],
         catalogs: [],
         idPrefixes: ['tt'],
-        configurable: `/configure?realdebridKey=${encodeURIComponent(realdebridKey)}&preferredQuality=${encodeURIComponent(preferredQuality)}&preferredCodec=${encodeURIComponent(preferredCodec)}&preferredAudio=${encodeURIComponent(preferredAudio)}&fallback=${fallback}&excludeKeywords=${encodeURIComponent(excludeKeywords)}`
+        // The configure URL now points to our settings page.
+        // We pass the config as a single parameter.
+        configurable: `/configure?config=${config}`
     };
 }
 
@@ -66,8 +68,8 @@ app.get('/', (req, res) => {
 
 // Manifest Endpoint - dynamically generated.
 app.get('/manifest.json', (req, res) => {
-    const { realdebridKey, preferredQuality, preferredCodec, preferredAudio, fallback, excludeKeywords } = req.query;
-    const manifest = createManifest(realdebridKey, preferredQuality, preferredCodec, preferredAudio, fallback, excludeKeywords);
+    const { config } = req.query;
+    const manifest = createManifest(config);
     res.json(manifest);
 });
 
@@ -75,7 +77,15 @@ app.get('/manifest.json', (req, res) => {
 app.get('/stream/:type/:id.json', async (req, res) => {
     try {
         const { type, id } = req.params;
-        const { realdebridKey, preferredQuality, preferredCodec, preferredAudio, fallback, excludeKeywords } = req.query;
+        const encodedConfig = req.query.config;
+
+        if (!encodedConfig) {
+            return res.json({ streams: [], error: 'Configuration not provided.' });
+        }
+
+        // Decode the configuration from the URL.
+        const config = JSON.parse(Buffer.from(encodedConfig, 'base64').toString('utf-8'));
+        const { realdebridKey, quality, codec, audio, fallback, exclude } = config;
 
         if (!realdebridKey) {
             return res.json({ streams: [], error: 'Real-Debrid API key not provided in settings.' });
@@ -96,7 +106,7 @@ app.get('/stream/:type/:id.json', async (req, res) => {
         }
 
         // Scrape Bitsearch for magnets, applying quality and sorting filters.
-        const magnets = await scrapeBitsearch(searchQuery, preferredQuality, preferredCodec, preferredAudio, excludeKeywords);
+        const magnets = await scrapeBitsearch(searchQuery, quality, codec, audio, exclude);
 
         if (magnets.length === 0) {
             console.log('No magnets found on Bitsearch.');

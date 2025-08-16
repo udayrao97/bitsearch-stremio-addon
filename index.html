@@ -146,14 +146,19 @@
                 return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
             };
 
-            const preferredQuality = getCheckedValues('quality').join(',');
-            const preferredCodec = getCheckedValues('codec').join(',');
-            const preferredAudio = getCheckedValues('audio').join(',');
-            const fallback = form.fallback.checked;
-            const excludeKeywords = form.excludeKeywords.value;
+            // This is the new, more concise way to get and encode the options.
+            const options = {
+                realdebridKey,
+                quality: getCheckedValues('quality').join(','),
+                codec: getCheckedValues('codec').join(','),
+                audio: getCheckedValues('audio').join(','),
+                fallback: form.fallback.checked,
+                exclude: form.excludeKeywords.value
+            };
+            const encodedOptions = btoa(JSON.stringify(options));
             
             const addonUrl = window.location.origin;
-            const manifestUrl = `${addonUrl}/manifest.json?realdebridKey=${encodeURIComponent(realdebridKey)}&preferredQuality=${encodeURIComponent(preferredQuality)}&preferredCodec=${encodeURIComponent(preferredCodec)}&preferredAudio=${encodeURIComponent(preferredAudio)}&fallback=${fallback}&excludeKeywords=${encodeURIComponent(excludeKeywords)}`;
+            const manifestUrl = `${addonUrl}/manifest.json?config=${encodedOptions}`;
 
             document.getElementById('installMessage').classList.remove('hidden');
 
@@ -166,4 +171,3 @@
     </script>
 </body>
 </html>
-
