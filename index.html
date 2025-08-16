@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitsearch Real-Debrid Addon Settings</title>
+    <!-- Use Tailwind CSS for easy styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-center mb-6 text-teal-400">Addon Settings</h1>
+        <p class="text-gray-400 text-center mb-8">Configure your Bitsearch Real-Debrid addon and install it directly into Stremio.</p>
+
+        <form id="configForm" class="space-y-8">
+            <!-- Debrid Section -->
+            <div class="bg-gray-700 p-6 rounded-lg">
+                <h2 class="text-xl font-semibold mb-4 text-teal-300">Debrid Service</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label for="realdebridKey" class="block text-sm font-medium text-gray-300">Real-Debrid API Key</label>
+                        <input
+                            type="text"
+                            id="realdebridKey"
+                            name="realdebridKey"
+                            placeholder="Paste your API key here..."
+                            class="mt-1 block w-full px-4 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                            required
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quality and Filters Section -->
+            <div class="bg-gray-700 p-6 rounded-lg">
+                <h2 class="text-xl font-semibold mb-4 text-teal-300">Quality and Filters</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-200 mb-2">Video Quality</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="4k" name="quality" value="4K" class="h-4 w-4 text-teal-600 bg-gray-600 rounded border-gray-500 focus:ring-teal-500">
+                                <label for="4k" class="ml-2 text-sm text-gray-300">4K</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="1080p" name="quality" value="1080p" checked class="h-4 w-4 text-teal-600 bg-gray-600 rounded border-gray-500 focus:ring-teal-500">
+                                <label for="1080p" class="ml-2 text-sm text-gray-300">1080p</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="720p" name="quality" value="720p" checked class="h-4 w-4 text-teal-600 bg-gray-600 rounded border-gray-500 focus:ring-teal-500">
+                                <label for="720p" class="ml-2 text-sm text-gray-300">720p</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-200 mb-2">Video Codec</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="h265" name="codec" value="x265" checked class="h-4 w-4 text-teal-600 bg-gray-600 rounded border-gray-500 focus:ring-teal-500">
+                                <label for="h265" class="ml-2 text-sm text-gray-300">H.265 (x265/HEVC)</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="h264" name="codec" value="x264" checked class="h-4 w-4 text-teal-600 bg-gray-600 rounded border-gray-500 focus:ring-teal-500">
+                                <label for="h264" class="ml-2 text-sm text-gray-300">H.264 (x264)</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="av1" name="codec" value="AV1" class="h-4 w-4 text-teal-600 bg-gray-600 rounded border-gray-500 focus:ring-teal-500">
+                                <label for="av1" class="ml-2 text-sm text-gray-300">AV1</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-200 mb-2">Audio Channels</h3>
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="5_1" name="audio" value="5.1" checked class="h-4 w-4 text-teal-600 bg-gray-600 rounded border-gray-500 focus:ring-teal-500">
+                                <label for="5_1" class="ml-2 text-sm text-gray-300">5.1 Surround</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="7_1" name="audio" value="7.1" class="h-4 w-4 text-teal-600 bg-gray-600 rounded border-gray-500 focus:ring-teal-500">
+                                <label for="7_1" class="ml-2 text-sm text-gray-300">7.1 Surround</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <label for="excludeKeywords" class="block text-sm font-medium text-gray-300">Exclude Keywords (comma-separated)</label>
+                    <input
+                        type="text"
+                        id="excludeKeywords"
+                        name="excludeKeywords"
+                        placeholder="e.g., CAM, TS, DUB"
+                        class="mt-1 block w-full px-4 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    >
+                </div>
+            </div>
+
+            <!-- Fallback Section -->
+            <div class="bg-gray-700 p-6 rounded-lg">
+                <h2 class="text-xl font-semibold mb-4 text-teal-300">Fallback Options</h2>
+                <div class="flex items-center">
+                    <input
+                        type="checkbox"
+                        id="fallback"
+                        name="fallback"
+                        class="h-4 w-4 text-teal-600 bg-gray-600 rounded border-gray-500 focus:ring-teal-500"
+                        checked
+                    >
+                    <label for="fallback" class="ml-2 block text-sm text-gray-300">Add non-cached torrents to Real-Debrid</label>
+                </div>
+            </div>
+
+            <button
+                type="submit"
+                class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+            >
+                Install Addon to Stremio
+            </button>
+        </form>
+
+        <p id="installMessage" class="mt-6 text-sm text-center text-gray-400 hidden">
+            Redirecting you to Stremio...
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('configForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const realdebridKey = form.realdebridKey.value;
+
+            if (!realdebridKey) {
+                alert('Please enter your Real-Debrid API Key.');
+                return;
+            }
+
+            const getCheckedValues = (name) => {
+                return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
+            };
+
+            const preferredQuality = getCheckedValues('quality').join(',');
+            const preferredCodec = getCheckedValues('codec').join(',');
+            const preferredAudio = getCheckedValues('audio').join(',');
+            const fallback = form.fallback.checked;
+            const excludeKeywords = form.excludeKeywords.value;
+            
+            const addonUrl = window.location.origin;
+            const manifestUrl = `${addonUrl}/manifest.json?realdebridKey=${encodeURIComponent(realdebridKey)}&preferredQuality=${encodeURIComponent(preferredQuality)}&preferredCodec=${encodeURIComponent(preferredCodec)}&preferredAudio=${encodeURIComponent(preferredAudio)}&fallback=${fallback}&excludeKeywords=${encodeURIComponent(excludeKeywords)}`;
+
+            document.getElementById('installMessage').classList.remove('hidden');
+
+            // Construct the Stremio installation URL
+            const installUrl = `stremio://${manifestUrl}`;
+            
+            // Redirect the user to Stremio
+            window.location.href = installUrl;
+        });
+    </script>
+</body>
+</html>
+

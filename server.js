@@ -1,64 +1,45 @@
 // A Stremio addon server that scrapes Bitsearch and integrates with Real-Debrid.
-// This version includes configurable settings for quality and fallback behavior.
+// This version includes a dedicated settings page and dynamic manifest generation.
 
 // Prerequisites:
 // 1. Install Node.js and npm.
 // 2. Run `npm init -y` in your project folder.
 // 3. Run `npm install express axios cheerio` to install dependencies.
-// 4. Save this code as `server.js` and run it with `node server.js`.
+// 4. Save both `server.js` and `index.html` in the same folder.
+// 5. Run `node server.js`.
 
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// You will need to obtain your Real-Debrid API key from your account settings.
-// This addon works by having the user input their API key directly into the addon settings.
 
 // =================================================================================================
 // STREMIO ADDON MANIFEST
 // The manifest describes what your addon does and its configurable options.
 // =================================================================================================
 
-const manifest = {
-    id: 'com.yourname.bitsearchrd',
-    version: '1.2.0',
-    name: 'Bitsearch Real-Debrid Addon',
-    description: 'Scrapes Bitsearch and checks for cached torrents on Real-Debrid. Now with more features!',
-    // The "extra" field is how we get user-configurable settings.
-    extra: [
-        {
-            name: 'realdebridKey',
-            title: 'Real-Debrid API Key',
-            type: 'text',
-            isRequired: true,
+// This is a dynamic manifest function now.
+// It generates the manifest based on the query parameters from the config page.
+function createManifest(realdebridKey, preferredQuality, preferredCodec, preferredAudio, fallback, excludeKeywords) {
+    return {
+        id: 'com.yourname.bitsearchrd',
+        version: '1.4.0',
+        name: 'Bitsearch Real-Debrid Addon',
+        description: 'Scrapes Bitsearch and checks for cached torrents on Real-Debrid. Now with a dedicated settings page!',
+        behaviorHints: {
+            configurable: true,
+            configurationRequired: true,
         },
-        {
-            name: 'preferredQuality',
-            title: 'Preferred Quality',
-            type: 'select',
-            options: ['4K', '1080p', '720p', 'Any'],
-            optionsLabels: { '4K': '4K', '1080p': '1080p', '720p': '720p', 'Any': 'Any' },
-            defaultValue: 'Any',
-            isRequired: true,
-        },
-        {
-            name: 'fallback',
-            title: 'Add non-cached torrents to RD',
-            type: 'checkbox',
-            defaultValue: true,
-        },
-    ],
-    resources: ['stream'],
-    types: ['movie', 'series'],
-    catalogs: [],
-    idPrefixes: ['tt'],
-    behaviorHints: {
-        configurable: true,
-    },
-};
+        resources: ['stream'],
+        types: ['movie', 'series'],
+        catalogs: [],
+        idPrefixes: ['tt'],
+        configurable: `/configure?realdebridKey=${encodeURIComponent(realdebridKey)}&preferredQuality=${encodeURIComponent(preferredQuality)}&preferredCodec=${encodeURIComponent(preferredCodec)}&preferredAudio=${encodeURIComponent(preferredAudio)}&fallback=${fallback}&excludeKeywords=${encodeURIComponent(excludeKeywords)}`
+    };
+}
 
 // CORS middleware to allow Stremio to access the server.
 app.use((req, res, next) => {
@@ -67,17 +48,26 @@ app.use((req, res, next) => {
     next();
 });
 
+// Serve the static configuration page.
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/configure', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // =================================================================================================
 // ENDPOINTS
 // This is where Stremio will make its requests.
 // =================================================================================================
 
-// New root endpoint for health checks and a friendly message.
+// New root endpoint for health checks.
 app.get('/', (req, res) => {
-    res.send('This is a Stremio addon for Bitsearch and Real-Debrid. Go to /manifest.json to install it.');
+    res.send('This is a Stremio addon for Bitsearch and Real-Debrid. Go to /configure to set it up.');
 });
 
+// Manifest Endpoint - dynamically generated.
 app.get('/manifest.json', (req, res) => {
+    const { realdebridKey, preferredQuality, preferredCodec, preferredAudio, fallback, excludeKeywords } = req.query;
+    const manifest = createManifest(realdebridKey, preferredQuality, preferredCodec, preferredAudio, fallback, excludeKeywords);
     res.json(manifest);
 });
 
@@ -85,7 +75,7 @@ app.get('/manifest.json', (req, res) => {
 app.get('/stream/:type/:id.json', async (req, res) => {
     try {
         const { type, id } = req.params;
-        const { realdebridKey, preferredQuality, fallback } = req.query;
+        const { realdebridKey, preferredQuality, preferredCodec, preferredAudio, fallback, excludeKeywords } = req.query;
 
         if (!realdebridKey) {
             return res.json({ streams: [], error: 'Real-Debrid API key not provided in settings.' });
@@ -106,7 +96,7 @@ app.get('/stream/:type/:id.json', async (req, res) => {
         }
 
         // Scrape Bitsearch for magnets, applying quality and sorting filters.
-        const magnets = await scrapeBitsearch(searchQuery, preferredQuality);
+        const magnets = await scrapeBitsearch(searchQuery, preferredQuality, preferredCodec, preferredAudio, excludeKeywords);
 
         if (magnets.length === 0) {
             console.log('No magnets found on Bitsearch.');
@@ -163,8 +153,8 @@ async function getTitleFromImdbId(imdbId) {
     }
 }
 
-// Scrape Bitsearch for magnet links, with quality filtering.
-async function scrapeBitsearch(query, preferredQuality) {
+// Scrape Bitsearch for magnet links, with quality and filter options.
+async function scrapeBitsearch(query, preferredQuality, preferredCodec, preferredAudio, excludeKeywords) {
     const magnets = [];
     // Bitsearch sorting: `sort=seeders` gives the most popular torrents first.
     const searchUrl = `https://bitsearch.to/search?q=${encodeURIComponent(query)}&sort=seeders`;
@@ -178,25 +168,30 @@ async function scrapeBitsearch(query, preferredQuality) {
             }
         });
         const $ = cheerio.load(response.data);
-
+        const qualityList = preferredQuality ? preferredQuality.split(',').map(q => q.toLowerCase().trim()) : [];
+        const codecList = preferredCodec ? preferredCodec.split(',').map(c => c.toLowerCase().trim()) : [];
+        const audioList = preferredAudio ? preferredAudio.split(',').map(a => a.toLowerCase().trim()) : [];
+        const excludeList = excludeKeywords ? excludeKeywords.split(',').map(k => k.toLowerCase().trim()) : [];
+        
         $('table.table tbody tr').each((index, element) => {
             const title = $(element).find('td a').first().text().trim();
             const magnetLink = $(element).find('a[href^="magnet:"]').attr('href');
-
+            
             if (magnetLink) {
-                magnets.push({ title, magnet: magnetLink });
+                const titleLower = title.toLowerCase();
+                
+                // Apply all filters.
+                const matchesQuality = qualityList.length === 0 || qualityList.some(q => titleLower.includes(q));
+                const matchesCodec = codecList.length === 0 || codecList.some(c => titleLower.includes(c));
+                const matchesAudio = audioList.length === 0 || audioList.some(a => titleLower.includes(a));
+                const matchesExclude = excludeList.some(k => titleLower.includes(k));
+
+                if (matchesQuality && matchesCodec && matchesAudio && !matchesExclude) {
+                    magnets.push({ title, magnet: magnetLink });
+                }
             }
         });
 
-        // Filter by preferred quality.
-        if (preferredQuality !== 'Any') {
-            const filteredMagnets = magnets.filter(m => m.title.includes(preferredQuality));
-            if (filteredMagnets.length > 0) {
-                console.log(`Filtered to ${filteredMagnets.length} results matching ${preferredQuality}.`);
-                return filteredMagnets;
-            }
-        }
-        
     } catch (error) {
         console.error('Error scraping Bitsearch:', error.message);
     }
