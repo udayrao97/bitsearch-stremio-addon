@@ -26,7 +26,7 @@ const PORT = process.env.PORT || 3000;
 // The main manifest is static, and the config is handled by the URL on install.
 const baseManifest = {
     id: 'com.yourname.bitsearchrd',
-    version: '1.6.0', // Updated version to reflect the fix
+    version: '1.7.0', // Updated version to reflect the fix
     name: 'Bitsearch Real-Debrid Addon',
     description: 'Scrapes Bitsearch and checks for cached torrents on Real-Debrid. Now with a dedicated settings page!',
     behaviorHints: {
@@ -37,6 +37,8 @@ const baseManifest = {
     types: ['movie', 'series'],
     catalogs: [],
     idPrefixes: ['tt'],
+    // The configure URL now points to our settings page.
+    configurable: '/index.html'
 };
 
 // CORS middleware to allow Stremio to access the server.
@@ -47,8 +49,7 @@ app.use((req, res, next) => {
 });
 
 // Serve the static configuration page.
-app.use(express.static(path.join(__dirname, 'public')));
-app.get('/configure', (req, res) => {
+app.get('/index.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -59,7 +60,7 @@ app.get('/configure', (req, res) => {
 
 // New root endpoint for health checks.
 app.get('/', (req, res) => {
-    res.send('This is a Stremio addon for Bitsearch and Real-Debrid. Go to /configure to set it up.');
+    res.send('This is a Stremio addon for Bitsearch and Real-Debrid. Go to /index.html to set it up.');
 });
 
 // Manifest Endpoint - this is a static manifest for the initial install.
@@ -73,7 +74,7 @@ app.get('/manifest/:config.json', (req, res) => {
     const manifest = {
         ...baseManifest,
         // This is the new, working installation URL
-        configurable: `/configure?config=${config}`
+        configurable: `/index.html?config=${config}`
     };
     res.json(manifest);
 });
